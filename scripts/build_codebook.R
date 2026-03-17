@@ -25,7 +25,8 @@ extract_var_info <- function(df, country, round, wave) {
     # Variable label
     vlab <- labelled::var_label(col)
     if (is.null(vlab) || identical(vlab, "")) vlab <- attr(col, "label")
-    vlab <- if (is.null(vlab)) NA_character_ else as.character(vlab)
+    vlab <- if (is.null(vlab)) NA_character_ else
+      iconv(as.character(vlab), to = "UTF-8", sub = "?")
 
     # Type: categorical only if there are value labels for *non-missing* codes.
     # Stata stores extended missing values (.a, .b, ... .z) as tagged NAs with
@@ -48,11 +49,11 @@ extract_var_info <- function(df, country, round, wave) {
     # range_or_cats
     if (is_cat) {
       codes   <- as.numeric(valid_vlabs)
-      labels  <- names(valid_vlabs)
+      labels  <- iconv(names(valid_vlabs), to = "UTF-8", sub = "?")
       ord     <- order(codes)
       pairs   <- paste0(codes[ord], "=", labels[ord])
       raw_str <- paste(pairs, collapse = "; ")
-      range_or_cats <- if (nchar(raw_str) > 200) {
+      range_or_cats <- if (nchar(raw_str, type = "bytes") > 200) {
         paste0(substr(raw_str, 1, 197), "...")
       } else {
         raw_str
