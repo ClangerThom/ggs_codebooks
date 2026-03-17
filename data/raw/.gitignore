@@ -1,0 +1,4 @@
+# Ignore all raw data files — they are proprietary and not committed.
+# This file exists only to track the data/raw/ directory itself.
+*
+!.gitignore

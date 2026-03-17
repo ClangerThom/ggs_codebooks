@@ -1,0 +1,17 @@
+# ── Proprietary / large source data ──────────────────────────────────────────
+# data/raw/ contents are ignored via data/raw/.gitignore (inner gitignore pattern)
+# so the directory itself is tracked but its files are not.
+
+# ── Regeneratable binary outputs ─────────────────────────────────────────────
+*.rds
+
+# ── R session artefacts ───────────────────────────────────────────────────────
+.Rhistory
+.RData
+
+# ── Positron / VS Code ────────────────────────────────────────────────────────
+.vscode/
+
+# ── OS / editor noise ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
