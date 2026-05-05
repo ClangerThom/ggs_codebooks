@@ -19,6 +19,8 @@ RAW_DIR <- "data/raw"
 OUT_DIR <- "data/codebooks"
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
+prefix_map <- load_module_prefixes()
+
 # -----------------------------------------------------------------------------
 # Discover and parse .dta filenames
 # -----------------------------------------------------------------------------
@@ -65,7 +67,8 @@ for (key in sort(names(groups))) {
   message(sprintf("\nBuilding: %s  Round %d  Waves: %s",
                   country, round, paste(names(wave_files), collapse = ", ")))
 
-  cb <- build_country_round(country, round, wave_files)
+  cb <- build_country_round(country, round, wave_files,
+                            prefix_map = prefix_map)
 
   if (round == 1L) r1_parts[[length(r1_parts) + 1]] <- cb
   if (round == 2L) r2_parts[[length(r2_parts) + 1]] <- cb
@@ -94,9 +97,11 @@ index_rows <- lapply(sort(names(groups)), function(key) {
   country <- grp[[1]]$country
   round   <- grp[[1]]$round
   waves   <- paste(sort(sapply(grp, `[[`, "wave")), collapse = ", ")
-  n_vars  <- nrow(if (round == 1L) r1 else r2 |>
+  src     <- if (round == 1L) r1 else r2
+  n_vars  <- src |>
     dplyr::filter(country == !!country, round == !!round) |>
-    dplyr::distinct(var_name))
+    dplyr::distinct(var_name) |>
+    nrow()
   tibble::tibble(
     country = country,
     round   = round,

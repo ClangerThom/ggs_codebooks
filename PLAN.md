@@ -37,18 +37,33 @@ ggs_codebooks/
 
 ## Codebook schema (one row per variable × wave × country)
 
-| column        | description                                            |
-|---------------|--------------------------------------------------------|
-| country       | ISO 3166-1 alpha-3 (e.g. `CZE`)                        |
-| round         | GGS round (`1` or `2`)                                 |
-| wave          | Wave number within that round                          |
-| var_name      | Variable name as in the .dta file                      |
-| var_label     | Full variable label                                    |
-| type          | `categorical` or `numeric`                             |
-| n_valid       | Count of non-missing observations                      |
-| pct_miss      | % missing                                              |
-| range_or_cats | Numeric range OR `code=Label; …` for categoricals      |
-| in_all_waves  | TRUE if var appears in every wave of this country-round|
+| column            | description                                                          |
+|-------------------|----------------------------------------------------------------------|
+| country           | ISO 3166-1 alpha-3 (e.g. `CZE`)                                      |
+| country_name      | Display name (`Czech Republic`)                                      |
+| round             | GGS round (`1` or `2`)                                               |
+| wave              | Wave label within that round (character — `"1"`, `"2"`, `"1_register"`) |
+| var_name          | Variable name as in the .dta file                                    |
+| var_label         | Full variable label                                                  |
+| module            | Topic module derived from var_name prefix (`fertility`, `life_history`, …); NA when no prefix matches |
+| type              | `categorical`, `numeric`, or `string`                                |
+| n_total           | Total respondents in this country-wave                               |
+| n_valid           | Count of non-missing observations                                    |
+| pct_miss          | % missing                                                            |
+| value_min         | Minimum (numeric only; full precision)                               |
+| value_max         | Maximum (numeric only; full precision)                               |
+| cat_levels        | `code=Label; …` for categoricals (truncated at 200 bytes)            |
+| mean, median, sd  | Distribution stats (numeric only; 4 sig figs)                        |
+| q1, q3            | First and third quartiles (numeric only; 4 sig figs)                 |
+| n_unique          | Distinct non-missing values (numeric and string)                     |
+| n_tagged_na       | Total Stata extended-missing observations (count, integer)           |
+| tagged_na_summary | Per-tag breakdown, e.g. `.a=Don't know (12); .b=Refusal (3)`         |
+| in_all_waves      | TRUE if var appears in every wave of this country-round              |
+| source_file       | Original .dta filename (traceability)                                |
+
+The module column is populated from `data/codebooks/module_prefixes.csv` —
+a curated CSV of `(round, prefix, module)` rows. R1 var names are stripped
+of their leading wave letter (`a`/`b`/`c`) before lookup.
 
 ---
 
@@ -150,3 +165,20 @@ keeping token cost low regardless of codebook size.
 - [ ] Work through remaining available country-rounds as data access allows
 - [ ] Add `scripts/build_all.R` runner
 - [ ] Add a small `scripts/query_codebook.R` helper for CC to use
+
+### Schema extensions — deferred / open
+
+- [ ] **Cross-round variable concordance** — separate file mapping R1 ↔ R2
+      variable names, since the harmonisation use case currently requires
+      analysts to figure this out themselves
+- [ ] **Derived-variable lineage** — for R2 `dv_*` vars, record which raw
+      items feed them (documented externally in GGS-II metadata; would need
+      scraping)
+- [ ] **Question text** — fuller wording than `var_label`. Usually only in
+      PDF questionnaires; would need OCR/parsing
+- [ ] **R2 bare-prefix vars** — investigate what the `a*` (~1,900 vars) and
+      `b*` (~1,300 vars) prefixes signify (likely respondent vs partner) and
+      add to `module_prefixes.csv`
+- [ ] **Survey-design role flag** — controlled vocab column
+      (`weight` / `psu` / `strata` / `id`) so analysts can pick design vars
+      for `survey::svydesign()` without grepping names

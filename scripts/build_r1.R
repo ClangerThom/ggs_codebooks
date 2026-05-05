@@ -5,8 +5,8 @@
 #
 # Strategy: Two passes per wave —
 #   1. Metadata pass (full dataset): var_label, type, categorical range_or_cats
-#   2. Per-country pass: n_valid, pct_miss, numeric ranges
-#   This avoids repeating 2500+ label extractions for each of ~16 countries.
+#   2. Per-country pass: n_total, n_valid, pct_miss, numeric ranges,
+#                        distribution stats, n_unique, tagged_na_summary
 #
 # Run from repo root:
 #   Rscript scripts/build_r1.R
@@ -19,7 +19,7 @@ library(tibble)
 RAW_DIR <- "data/raw"
 OUT_DIR <- "data/codebooks"
 
-# GGS R1 country name → ISO3 (names match value labels in the .dta files)
+# GGS R1 country name (as used in the .dta value labels) -> ISO3
 ISO3_MAP <- c(
   "Bulgaria"      = "BGR",
   "Russia"        = "RUS",
@@ -41,12 +41,13 @@ ISO3_MAP <- c(
   "Sweden"        = "SWE"
 )
 
-# Country variable prefix follows the wave letter (a/b/c) used throughout R1
 WAVE_INFO <- list(
   list(wave = "1", path = file.path(RAW_DIR, "R1_W1.dta"), cvar = "acountry"),
   list(wave = "2", path = file.path(RAW_DIR, "R1_W2.dta"), cvar = "bcountry"),
   list(wave = "3", path = file.path(RAW_DIR, "R1_W3.dta"), cvar = "ccountry")
 )
+
+prefix_map <- load_module_prefixes()
 
 # =============================================================================
 all_parts <- list()
@@ -60,7 +61,7 @@ for (wi in WAVE_INFO) {
   df <- haven::read_dta(path)
   message(sprintf("  %d rows x %d cols", nrow(df), ncol(df)))
 
-  # Countries present in this wave (with at least 1 row, skip tagged-NA labels)
+  # Countries present in this wave (with at least 1 row)
   country_labels   <- labelled::val_labels(df[[cvar]])
   country_code_vec <- as.numeric(df[[cvar]])
   valid_country_names <- names(country_labels)[
@@ -75,7 +76,7 @@ for (wi in WAVE_INFO) {
   var_names <- setdiff(names(df), cvar)
 
   # ---------------------------------------------------------------------------
-  # Pass 1 — metadata from full dataset (labels, type, categorical categories)
+  # Pass 1 — metadata from full dataset (label, type, categorical range_or_cats)
   # ---------------------------------------------------------------------------
   message("  Extracting variable metadata ...")
   meta <- purrr::imap_dfr(df[, var_names], function(col, col_name) {
@@ -91,9 +92,11 @@ for (wi in WAVE_INFO) {
       valid_vlabs <- vlabs[keep]
     }
     is_cat <- length(valid_vlabs) > 0
-    type   <- if (is_cat) "categorical" else "numeric"
+    type   <- if (is.character(col))   "string"
+              else if (is_cat)         "categorical"
+              else                     "numeric"
 
-    range_or_cats <- if (is_cat) {
+    cat_str <- if (is_cat) {
       codes   <- as.numeric(valid_vlabs)
       labels  <- iconv(names(valid_vlabs), to = "UTF-8", sub = "?")
       ord     <- order(codes)
@@ -102,16 +105,16 @@ for (wi in WAVE_INFO) {
       if (nchar(raw_str, type = "bytes") > 200)
         paste0(substr(raw_str, 1, 197), "...") else raw_str
     } else {
-      NA_character_   # numeric range filled per country below
+      NA_character_
     }
 
     tibble::tibble(var_name = col_name, var_label = vlab,
-                   type = type, range_or_cats = range_or_cats)
+                   type = type, cat_levels = cat_str)
   })
-  numeric_vars <- meta$var_name[meta$type == "numeric"]
 
   # ---------------------------------------------------------------------------
-  # Pass 2 — per-country: missingness + numeric ranges
+  # Pass 2 — per-country: n_total, missingness, numeric ranges + dist stats,
+  #          n_unique, tagged_na_summary
   # ---------------------------------------------------------------------------
   for (cn in valid_country_names) {
     iso3 <- ISO3_MAP[[cn]]
@@ -125,42 +128,80 @@ for (wi in WAVE_INFO) {
     n_rows <- nrow(sub_df)
     message(sprintf("    %s (%s): %d rows", cn, iso3, n_rows))
 
-    miss_df <- purrr::imap_dfr(sub_df, function(col, col_name) {
-      n_miss <- sum(is.na(col))
+    var_type_lookup <- setNames(meta$type, meta$var_name)
+
+    per_var <- purrr::imap_dfr(sub_df, function(col, col_name) {
+      n_miss   <- sum(is.na(col))
+      n_valid  <- n_rows - n_miss
+      pct_miss <- round(n_miss / n_rows * 100, 1)
+      var_type <- var_type_lookup[[col_name]]
+
+      value_min <- value_max <- NA_real_
+      mean_v <- median_v <- sd_v <- q1_v <- q3_v <- NA_real_
+      n_unique <- NA_integer_
+
+      if (var_type == "string") {
+        n_unique <- dplyr::n_distinct(col, na.rm = TRUE)
+
+      } else if (var_type == "numeric") {
+        num_col <- suppressWarnings(as.numeric(col))
+        mn <- suppressWarnings(min(num_col, na.rm = TRUE))
+        mx <- suppressWarnings(max(num_col, na.rm = TRUE))
+        if (!is.infinite(mn)) value_min <- mn
+        if (!is.infinite(mx)) value_max <- mx
+        if (n_valid > 0) {
+          mean_v   <- signif(mean(num_col, na.rm = TRUE), 4)
+          median_v <- signif(stats::median(num_col, na.rm = TRUE), 4)
+          sd_v     <- signif(stats::sd(num_col, na.rm = TRUE), 4)
+          qs       <- suppressWarnings(stats::quantile(num_col,
+                        c(0.25, 0.75), na.rm = TRUE, names = FALSE))
+          q1_v     <- signif(qs[1], 4)
+          q3_v     <- signif(qs[2], 4)
+          n_unique <- dplyr::n_distinct(num_col, na.rm = TRUE)
+        }
+      }
+
+      n_tagged_na <- if (is.numeric(col) || inherits(col, "haven_labelled")) {
+        as.integer(sum(!is.na(haven::na_tag(col))))
+      } else {
+        0L
+      }
+      tagged_na_summary <- build_tagged_na_summary(col)
+
       tibble::tibble(
         var_name = col_name,
-        n_valid  = n_rows - n_miss,
-        pct_miss = round(n_miss / n_rows * 100, 1)
+        n_total = n_rows, n_valid = n_valid, pct_miss = pct_miss,
+        value_min = value_min, value_max = value_max,
+        mean = mean_v, median = median_v, sd = sd_v,
+        q1 = q1_v, q3 = q3_v,
+        n_unique = n_unique,
+        n_tagged_na = n_tagged_na,
+        tagged_na_summary = tagged_na_summary
       )
     })
 
-    num_sub <- sub_df[, intersect(numeric_vars, names(sub_df)), drop = FALSE]
-    num_ranges <- purrr::imap_dfr(num_sub, function(col, col_name) {
-      num_col <- suppressWarnings(as.numeric(col))
-      mn  <- suppressWarnings(min(num_col, na.rm = TRUE))
-      mx  <- suppressWarnings(max(num_col, na.rm = TRUE))
-      rng <- if (is.infinite(mn) || is.infinite(mx)) NA_character_ else paste0(mn, "-", mx)
-      tibble::tibble(var_name = col_name, num_range = rng)
-    })
-
     cb <- meta |>
-      dplyr::left_join(miss_df,    by = "var_name") |>
-      dplyr::left_join(num_ranges, by = "var_name") |>
+      dplyr::left_join(per_var, by = "var_name") |>
       dplyr::mutate(
-        range_or_cats = dplyr::if_else(type == "numeric", num_range, range_or_cats),
-        country       = iso3,
-        round         = 1L,
-        wave          = wave
+        country      = iso3,
+        country_name = unname(ISO3_NAME_MAP[iso3]),
+        round        = 1L,
+        wave         = wave,
+        source_file  = basename(path)
       ) |>
-      dplyr::select(country, round, wave, var_name, var_label, type,
-                    n_valid, pct_miss, range_or_cats)
+      dplyr::select(country, country_name, round, wave,
+                    var_name, var_label, type,
+                    n_total, n_valid, pct_miss,
+                    value_min, value_max, cat_levels,
+                    mean, median, sd, q1, q3, n_unique,
+                    n_tagged_na, tagged_na_summary, source_file)
 
     all_parts[[length(all_parts) + 1]] <- cb
   }
 }
 
 # =============================================================================
-# Combine and compute in_all_waves
+# Combine, compute in_all_waves, assign module, finalise column order
 # =============================================================================
 r1 <- dplyr::bind_rows(all_parts)
 
@@ -175,8 +216,15 @@ var_n_waves <- r1 |>
 r1 <- r1 |>
   dplyr::left_join(country_n_waves, by = "country") |>
   dplyr::left_join(var_n_waves,     by = c("country", "var_name")) |>
-  dplyr::mutate(in_all_waves = n_var_waves == n_waves) |>
-  dplyr::select(-n_waves, -n_var_waves) |>
+  dplyr::mutate(in_all_waves = n_var_waves == n_waves,
+                module = assign_module(var_name, 1L, prefix_map)) |>
+  dplyr::select(country, country_name, round, wave,
+                var_name, var_label, module, type,
+                n_total, n_valid, pct_miss,
+                value_min, value_max, cat_levels,
+                mean, median, sd, q1, q3, n_unique,
+                n_tagged_na, tagged_na_summary,
+                in_all_waves, source_file) |>
   dplyr::arrange(country, wave, var_name)
 
 # =============================================================================
