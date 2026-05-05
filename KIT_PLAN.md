@@ -53,6 +53,22 @@ is CC-legible by default.
 
 ---
 
+## Notes
+
+**Canonical code.** The `tee()` helper and the project `.Rprofile`
+options block live verbatim in `docs/starting_a_new_analysis.md` (#7).
+Every new analysis copies them from there. Do not maintain alternative
+versions elsewhere — drift defeats the purpose.
+
+**Doc style.** Each `docs/*.md` page is short and opinionated. Point
+at GGP documentation for canonical detail; do not reproduce it.
+
+**GitHub username.** Use `ClangerThom` for repo URLs and `quarto add`
+commands. The local git config `ClangerThomas` is a separate identity
+and must not appear in URLs.
+
+---
+
 ## First-cut deliverables
 
 | # | Item | Status | Depends on |
@@ -83,6 +99,11 @@ Sections:
 - Wave-prefix gotcha (R1 a*/b*/c*; keep current text).
 - Pointers: `docs/`, `_extensions/ggs-inspect/`, the MUNI theme.
 
+**Done when:**
+- [ ] States the three conventions
+- [ ] Codebook schema reference fits on one screen
+- [ ] Includes at least one query recipe runnable as `Rscript -e`
+
 ### 2. `docs/missing_data.md`
 
 GGS missingness has three layers:
@@ -96,6 +117,10 @@ to `NA` vs preserve as a category, recipes (`zap_missing`, `user_na_to_na`,
 custom helpers), and how this interacts with the codebook's `n_valid` /
 `pct_miss` columns.
 
+**Done when:**
+- [ ] Distinguishes the three layers (`.a`–`.z`, negative codes, structural skips)
+- [ ] Includes one cleaning recipe per layer
+
 ### 3. `docs/weights.md`
 
 Short, opinionated. Design weights vs post-stratification vs
@@ -103,17 +128,29 @@ longitudinal/panel weights. Variable names per round. When to use which
 for descriptives, regression, panel analysis. Pointers to GGP
 documentation for the underlying formulas — we don't reproduce them.
 
+**Done when:**
+- [ ] Lists weight variable names per round
+- [ ] States which weight to use for descriptives, regression, panel
+
 ### 4. `docs/longitudinal.md`
 
 Respondent ID linkage across waves. Attrition. The R1 a*/b*/c* wave
 prefix and how it interacts with `bind_rows`. Pivoting between long
 and wide for panel work.
 
+**Done when:**
+- [ ] Documents respondent ID linkage across waves
+- [ ] Documents the R1 `a*`/`b*`/`c*` prefix gotcha
+
 ### 5. `docs/r1_vs_r2.md`
 
 Why naming differs. Sample-frame and instrument differences worth
 knowing before treating R1 + R2 as a single longitudinal series. Where
 they can and cannot be combined.
+
+**Done when:**
+- [ ] Lists key instrument differences
+- [ ] States when R1 + R2 can and cannot be combined
 
 ### 6. `docs/country_coverage.md` (auto-generated) + builder
 
@@ -123,6 +160,11 @@ country × round × wave matrix as markdown table(s) and writes
 
 Auto-regen note in the file header so readers know not to hand-edit.
 Run after each codebook rebuild.
+
+**Done when:**
+- [ ] `scripts/build_coverage.R` exists and runs cleanly
+- [ ] Output carries an auto-regen warning header
+- [ ] Regenerates idempotently from the round CSVs
 
 ### 7. `docs/starting_a_new_analysis.md`
 
@@ -143,6 +185,11 @@ in `~/github_projects/`:
 CC reads this doc when scaffolding a new analysis; we don't ship a
 copyable template directory.
 
+**Done when:**
+- [ ] Bootstrap checklist is ≤10 steps
+- [ ] Pins canonical `tee()` and `.Rprofile` code verbatim
+- [ ] Includes child `CLAUDE.md` template pointing back to this repo
+
 ### 8. `docs/common_variables.md` (template)
 
 User-populated. Markdown table:
@@ -154,6 +201,11 @@ User-populated. Markdown table:
 
 A handful of rows pre-filled with placeholder syntax to show shape;
 user fills in real mappings as they crop up in actual analyses.
+
+**Done when:**
+- [ ] Has the four-column table header
+- [ ] Has 1–2 placeholder rows showing shape
+- [ ] Notes that the user populates real entries
 
 ### 9. `_extensions/ggs-inspect/`
 
@@ -173,6 +225,11 @@ codebooks and docs in one repo is supported.
 The extension is intentionally tiny: format YAML + one CSS file. Not a
 template — analysts write their own deck `.qmd` and reference the
 format.
+
+**Done when:**
+- [ ] Provides a working `format: ggs-inspect-revealjs`
+- [ ] Renders a test deck with serif font and `#FFF1E5` background
+- [ ] `quarto add ClangerThom/ggs_codebooks` installs it cleanly into a fresh dir
 
 ### 10. `scripts/query_codebook.R` — API spec (deferred)
 
