@@ -254,8 +254,11 @@ build_country_round <- function(country, round, wave_files,
       dplyr::mutate(in_all_waves = TRUE)
   }
 
+  # Computed outside mutate(): inside data-masking, `round` resolves to the
+  # column (length nrow(all_waves)) instead of the scalar function argument.
+  all_waves$module <- assign_module(all_waves$var_name, round, prefix_map)
+
   all_waves |>
-    dplyr::mutate(module = assign_module(var_name, round, prefix_map)) |>
     dplyr::select(country, country_name, round, wave,
                   var_name, var_label, module, type,
                   n_total, n_valid, pct_miss,

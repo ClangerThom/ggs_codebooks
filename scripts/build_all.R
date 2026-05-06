@@ -90,7 +90,7 @@ r1 <- write_round_csv(r1_parts, 1L)
 r2 <- write_round_csv(r2_parts, 2L)
 
 # -----------------------------------------------------------------------------
-# Write index.csv
+# Write index.csv — merge with existing entries for rounds we did not build
 # -----------------------------------------------------------------------------
 index_rows <- lapply(sort(names(groups)), function(key) {
   grp     <- groups[[key]]
@@ -111,7 +111,21 @@ index_rows <- lapply(sort(names(groups)), function(key) {
   )
 })
 
-index <- dplyr::bind_rows(index_rows)
+built_rounds <- unique(vapply(groups, function(g) g[[1]]$round, integer(1)))
+
+existing_index <- tryCatch(
+  readr::read_csv(file.path(OUT_DIR, "index.csv"), show_col_types = FALSE),
+  error = function(e) tibble::tibble()
+)
+
+index <- dplyr::bind_rows(
+  if (nrow(existing_index) > 0)
+    existing_index |> dplyr::filter(!round %in% built_rounds)
+  else existing_index,
+  dplyr::bind_rows(index_rows)
+) |>
+  dplyr::arrange(round, country)
+
 readr::write_excel_csv(index, file.path(OUT_DIR, "index.csv"))
 message(sprintf("\nSaved: data/codebooks/index.csv"))
 
