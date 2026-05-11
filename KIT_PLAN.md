@@ -2,7 +2,7 @@
 
 ## Goal
 
-Turn `ggs_codebooks` into a launchpad for new CC-assisted R/Quarto
+Turn `ggs_analysis_starter_kit` into a launchpad for new CC-assisted R/Quarto
 analyses of GGS. Future analyses live as their own GitHub repos under
 `~/github_projects/`; this repo provides the codebooks (built per
 `PLAN.md`) plus the conventions, helpers, docs, and one Quarto extension
@@ -178,7 +178,7 @@ in `~/github_projects/`:
 4. Drop-in `tee()` helper (literal code).
 5. Drop-in child `CLAUDE.md` template (with a pointer back to this
    repo's docs).
-6. `quarto add ClangerThom/ggs_codebooks` to install the
+6. `quarto add ClangerThom/ggs_analysis_starter_kit` to install the
    `ggs-inspect` extension.
 7. `.gitignore` essentials.
 
@@ -216,7 +216,7 @@ background, no MUNI branding.
 Installed in any analysis repo via:
 
 ```
-quarto add ClangerThom/ggs_codebooks
+quarto add ClangerThom/ggs_analysis_starter_kit
 ```
 
 Quarto walks `_extensions/` and adds the format. Coexisting with the
@@ -229,7 +229,7 @@ format.
 **Done when:**
 - [ ] Provides a working `format: ggs-inspect-revealjs`
 - [ ] Renders a test deck with serif font and `#FFF1E5` background
-- [ ] `quarto add ClangerThom/ggs_codebooks` installs it cleanly into a fresh dir
+- [ ] `quarto add ClangerThom/ggs_analysis_starter_kit` installs it cleanly into a fresh dir
 
 ### 10. `scripts/query_codebook.R` — API spec (deferred)
 

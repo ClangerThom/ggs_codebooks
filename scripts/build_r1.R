@@ -4,7 +4,7 @@
 #           R1 uses one file per wave (all countries combined), unlike R2.
 #
 # Strategy: Two passes per wave —
-#   1. Metadata pass (full dataset): var_label, type, categorical range_or_cats
+#   1. Metadata pass (full dataset): var_label, type, categorical cat_levels
 #   2. Per-country pass: n_total, n_valid, pct_miss, numeric ranges,
 #                        distribution stats, n_unique, tagged_na_summary
 #
@@ -76,7 +76,7 @@ for (wi in WAVE_INFO) {
   var_names <- setdiff(names(df), cvar)
 
   # ---------------------------------------------------------------------------
-  # Pass 1 — metadata from full dataset (label, type, categorical range_or_cats)
+  # Pass 1 — metadata from full dataset (label, type, categorical cat_levels)
   # ---------------------------------------------------------------------------
   message("  Extracting variable metadata ...")
   meta <- purrr::imap_dfr(df[, var_names], function(col, col_name) {

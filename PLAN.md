@@ -17,7 +17,7 @@ Primary use cases:
 ## Folder structure
 
 ```
-ggs_codebooks/
+ggs_analysis_starter_kit/
 ├── scripts/
 │   ├── build_codebook.R        # generalised single-country-round builder
 │   └── build_all.R             # loops over all available .dta files, writes
@@ -140,7 +140,7 @@ cb_r2 <- read.csv("data/codebooks/GGS_R2.csv")
 
 cb_r2 |>
   dplyr::filter(var_name == "dv_coh") |>
-  dplyr::select(country, wave, var_label, range_or_cats)
+  dplyr::select(country, wave, var_label, cat_levels, value_min, value_max)
 
 # ── Single-country lookup ────────────────────────────────────────────────────
 cb_r2 |>

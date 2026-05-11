@@ -7,8 +7,10 @@
 # Schema  : country, country_name, round, wave,
 #           var_name, var_label, module, type,
 #           n_total, n_valid, pct_miss,
-#           range_or_cats, mean, median, sd, q1, q3, n_unique,
-#           tagged_na_summary, in_all_waves, source_file
+#           value_min, value_max, cat_levels,
+#           mean, median, sd, q1, q3, n_unique,
+#           n_tagged_na, tagged_na_summary,
+#           in_all_waves, source_file
 # =============================================================================
 
 library(haven)

@@ -75,14 +75,14 @@ inspect_codebook <- function(path) {
   cat(sprintf("\n── 100%% missing variables: %d ──\n", nrow(all_miss)))
   if (nrow(all_miss) > 0) print(all_miss |> dplyr::count(country, round, wave))
 
-  # 9. range_or_cats: numeric vars that have a value (should be a range or NA)
-  cat("\n── Numeric range_or_cats sample (first 5) ──\n")
-  print(cb |> dplyr::filter(type == "numeric", !is.na(range_or_cats)) |> head(5) |>
-          dplyr::select(country, wave, var_name, range_or_cats))
+  # 9. Numeric vars with value_min/value_max populated (sanity sample)
+  cat("\n── Numeric value_min/value_max sample (first 5) ──\n")
+  print(cb |> dplyr::filter(type == "numeric", !is.na(value_min)) |> head(5) |>
+          dplyr::select(country, wave, var_name, value_min, value_max))
 
-  # 10. range_or_cats: categorical vars with NA (all cats were tagged-NA only?)
-  cat_no_cats <- cb |> dplyr::filter(type == "categorical", is.na(range_or_cats))
-  cat(sprintf("\n── Categorical vars with NA range_or_cats: %d ──\n", nrow(cat_no_cats)))
+  # 10. cat_levels: categorical vars with NA (all cats were tagged-NA only?)
+  cat_no_cats <- cb |> dplyr::filter(type == "categorical", is.na(cat_levels))
+  cat(sprintf("\n── Categorical vars with NA cat_levels: %d ──\n", nrow(cat_no_cats)))
   if (nrow(cat_no_cats) > 0) print(head(cat_no_cats, 10) |> dplyr::select(country, wave, var_name, var_label))
 
   # 11. in_all_waves: single-wave countries should all be TRUE
@@ -110,12 +110,12 @@ inspect_codebook <- function(path) {
       dplyr::summarise(pct_in_all_waves = round(mean(in_all_waves) * 100, 1), .groups = "drop"))
   }
 
-  # 13. Truncated range_or_cats strings
-  truncated <- sum(grepl("\\.\\.\\.$", cb$range_or_cats), na.rm = TRUE)
-  cat(sprintf("\n── Truncated range_or_cats (>200 bytes): %d ──\n", truncated))
+  # 13. Truncated cat_levels strings
+  truncated <- sum(grepl("\\.\\.\\.$", cb$cat_levels), na.rm = TRUE)
+  cat(sprintf("\n── Truncated cat_levels (>200 bytes): %d ──\n", truncated))
   if (truncated > 0) {
-    print(cb |> dplyr::filter(grepl("\\.\\.\\.$", range_or_cats)) |>
-            head(3) |> dplyr::select(country, wave, var_name, range_or_cats))
+    print(cb |> dplyr::filter(grepl("\\.\\.\\.$", cat_levels)) |>
+            head(3) |> dplyr::select(country, wave, var_name, cat_levels))
   }
 
   invisible(cb)
